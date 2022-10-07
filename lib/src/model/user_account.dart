@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'package:abg_utils/abg_utils.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:uuid/uuid.dart';
@@ -180,48 +179,6 @@ Future<String?> googleLogin() async {
   return null;
 }
 
-Future<String?> facebookLogin() async {
-  try {
-
-    localSettings.saveLogin("", "", "");
-
-    if (!kIsWeb)
-      await FacebookAuth.instance.logOut();
-    LoginResult result = await FacebookAuth.instance.login();
-
-    userAccountData.userSocialLogin = "facebook";
-
-    final AuthCredential credential = FacebookAuthProvider.credential(  // String accessToken
-      result.accessToken!.token,
-    );
-    var t = await FirebaseAuth.instance.signInWithCredential(credential);
-    final User? user = t.user;
-    if (user == null)
-      return "user == null";
-
-    var querySnapshot = await FirebaseFirestore.instance.collection("listusers").doc(user.uid).get();
-    var data = querySnapshot.data();
-    if (data != null && data.isNotEmpty)
-      return null;
-
-    addPoint("info", error: "facebook login email=${user.email}, name=${user.displayName}");
-
-    FirebaseFirestore.instance.collection("listusers").doc(user.uid).set({
-      "visible": true,
-      "phoneVerified": false,
-      "email": user.email,
-      "phone": "",
-      "name": user.displayName,
-      "date_create" : FieldValue.serverTimestamp(),
-      "socialLogin" : "facebook"
-    });
-    //_message("Sign In ${user!.uid} with Facebook");
-  } catch (ex) {
-    return "facebookLogin " + ex.toString();
-  }
-  return null;
-}
-
 String generateNonce([int length = 32]) {
   final charset =
       '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
@@ -300,8 +257,6 @@ logout() async {
   }
   await FirebaseAuth.instance.signOut();
   dprint("=================logout===============");
-  if (userAccountData.userSocialLogin == "facebook")
-    FacebookAuth.instance.logOut();
   // if (userAccountData.userSocialLogin == "google")
 
   userAccountData = UserAccountData.createEmpty();
